@@ -16,7 +16,7 @@ typ, data = box.search(None, '(BEFORE {0})'.format(datedays))
 
 count = len(data[0].split())
 
-logging.basicConfig(level=logging.DEBUG, filename="logfile", filemode="a+",
+logging.basicConfig(level=logging.DEBUG, filename="~/logfile", filemode="a+",
                         format="%(asctime)-15s %(levelname)-8s %(message)s")
 logging.info('%d messages deleted', count)
 
