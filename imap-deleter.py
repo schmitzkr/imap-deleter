@@ -1,6 +1,3 @@
-#delete messages from a folder over 30 days old
-# https://stackoverflow.com/questions/3180891/imap-how-to-delete-messages
-
 #!/bin/python
 
 import imaplib
@@ -26,5 +23,6 @@ logging.info('%d messages deleted', count)
 for num in data[0].split():
     box.store(num, '+FLAGS', '\\Deleted')
 
+box.expunge()
 box.close()
 box.logout()
