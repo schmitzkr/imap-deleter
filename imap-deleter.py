@@ -1,45 +1,53 @@
-#!/bin/python
-
 import imaplib
-import config
 import datetime
 import logging
-import sys
+import logging.handlers
+import smtplib
+from email.mime.text import MIMEText
+
+import config
 
 current_date = datetime.date.today()
 d = 30
-datedays = (current_date-datetime.timedelta(days=d)).strftime("%d-%b-%Y")
+datedays = (current_date - datetime.timedelta(days=d)).strftime("%d-%b-%Y")
 
-def match_and_return_variables(input_value):
-    for tpl in config.creds:
-        if tpl[0] == input_value:
-            first_element, second_element = tpl
-            return first_element, second_element
+# Configure the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
-    return None
+# Create a SMTP handler
+smtp_handler = logging.handlers.SMTPHandler(
+    mailhost=(config.host, config.port),
+    fromaddr=config.from_address,
+    toaddrs=[config.to_address],
+    credentials=config.send_creds,
+    subject='[delete after 30 days] logging Output',
+    secure=()
+)
+smtp_handler.setLevel(logging.DEBUG)
 
-if len(sys.argv) > 1:
-    # Get the command-line parameter
-    user_input = sys.argv[1]
+# Add the SMTP handler to the root logger
+logger.addHandler(smtp_handler)
 
-matching_tuple = match_and_return_variables(user_input)
+def process_account(account):
+    box = imaplib.IMAP4_SSL(config.host, 993)
+    box.login(account[0], account[1])
+    box.select("INBOX.delete-after-30-days")
+    typ, data = box.search(None, '(BEFORE {0})'.format(datedays))
 
-box = imaplib.IMAP4_SSL(config.host, 993)
-box.login(matching_tuple[0], matching_tuple[1])
-box.select("INBOX.delete-after-30-days")
-typ, data = box.search(None, '(BEFORE {0})'.format(datedays))
+    count = len(data[0].split())
 
-count = len(data[0].split())
+    # Log your messages
+    logger.info('connected to %s, %d messages deleted', account[0], count)
 
-logging.basicConfig(level=logging.DEBUG, filename="logfile", filemode="a+",
-##logging.basicConfig(level=logging.DEBUG, filename="/home/grigory/logfile", filemode="a+",
-                        format="%(asctime)-15s %(levelname)-8s %(message)s")
-logging.info('connected to %a', matching_tuple[0])
-logging.info('%d messages deleted', count)
+    for num in data[0].split():
+        box.store(num, '+FLAGS', '\\Deleted')
 
-for num in data[0].split():
-    box.store(num, '+FLAGS', '\\Deleted')
+    box.expunge()
+    box.close()
+    box.logout()
 
-box.expunge()
-box.close()
-box.logout()
+if __name__ == "__main__":
+    # Connect to each account and process the email data
+    for account in config.creds:
+        process_account(account)
