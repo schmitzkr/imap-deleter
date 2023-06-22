@@ -1,4 +1,5 @@
 config.py
+imap-deleter-aio.py
 /__pycache__/
 logfile
 launch.json
