@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 
 # Create a SMTP handler
 smtp_handler = logging.handlers.SMTPHandler(
-    mailhost=(config.host, config.port),
+    mailhost=(config.smtp_host, config.smtp_port),
     fromaddr=config.from_address,
     toaddrs=[config.to_address],
     credentials=config.send_creds,
@@ -30,15 +30,15 @@ smtp_handler.setLevel(logging.DEBUG)
 logger.addHandler(smtp_handler)
 
 def process_account(account):
-    box = imaplib.IMAP4_SSL(config.host, 993)
-    box.login(account[0], account[1])
+    box = imaplib.IMAP4_SSL(account[0], account[1])
+    box.login(account[2], account[3])
     box.select("INBOX.delete-after-30-days")
     typ, data = box.search(None, '(BEFORE {0})'.format(datedays))
 
     count = len(data[0].split())
 
     # Log your messages
-    logger.info('connected to %s, %d messages deleted', account[0], count)
+    logger.info('connected to %s:%d, %d messages deleted', account[0], account[1], count)
 
     for num in data[0].split():
         box.store(num, '+FLAGS', '\\Deleted')
